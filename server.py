@@ -46,6 +46,7 @@ class Server:
             nickname = client.recv(self.size).decode('ascii')  # get the nickname from client
 
             if nickname in self.nicknames:
+                client.send('NICK_ERROR'.encode('ascii'))
                 client.shutdown(socket.SHUT_RDWR)
                 client.close()
             else:

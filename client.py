@@ -1,5 +1,6 @@
 import socket
 import threading
+import sys
 
 
 class Client:
@@ -13,21 +14,29 @@ class Client:
             self.socket.connect(self.location)
         except ConnectionRefusedError:
             print('Cannot connect to server.')
+            sys.exit()
 
-        threading.Thread(target=self.receive).start()
-        threading.Thread(target=self.write).start()
+        self.receive_thread = threading.Thread(target=self.receive)
+        self.write_thread = threading.Thread(target=self.write)
+
+        self.receive_thread.start()
+        self.write_thread.start()
 
     def receive(self):
         """ Get messages from server """
         while True:
             try:
                 message = self.socket.recv(self.size).decode('ascii')
+                # send nickname of the client to server
                 if message == 'NICK':
                     self.socket.send(self.nickname.encode('ascii'))
+                elif message == 'NICK_ERROR':
+                    print('This nickname is already used on server.')
                 else:
                     print(message)
             except socket.error as e:
                 print(str(e))
+                self.socket.shutdown(socket.SHUT_RDWR)
                 self.socket.close()
                 break
 
