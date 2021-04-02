@@ -1,30 +1,47 @@
 import socket
+import threading
 
 
 class Client:
-    def __init__(self, host, port):
+    def __init__(self, host, port, nickname):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.location = (host, port)
         self.size = 1024
-        print('Created')
+        self.nickname = nickname
 
-    def connect_to_server(self):
-        self.socket.connect(self.location)  # connect to server
-        data = input('Enter your message: ').encode()
-        self.send_data_to_server(data)
+        try:
+            self.socket.connect(self.location)
+        except ConnectionRefusedError:
+            print('Cannot connect to server.')
 
-    def send_data_to_server(self, data: bytes):
+        threading.Thread(target=self.receive).start()
+        threading.Thread(target=self.write).start()
+
+    def receive(self):
+        """ Get messages from server """
         while True:
-            self.socket.sendall(data)  # send data to server
-            reply = self.socket.recv(self.size)  # get data from server
-            print(repr(reply))
+            try:
+                message = self.socket.recv(self.size).decode('ascii')
+                if message == 'NICK':
+                    self.socket.send(self.nickname.encode('ascii'))
+                else:
+                    print(message)
+            except socket.error as e:
+                print(str(e))
+                self.socket.close()
+                break
+
+    def write(self):
+        """ Send messages to server """
+        while True:
+            message = f'{self.nickname}: {input("")}'
+            self.socket.send(message.encode('ascii'))
 
 
 def main():
-    c = Client('127.0.0.1', 55555)
-    c.connect_to_server()
+    c = Client('127.0.0.1', 55555, 'Arnold1')
+    c.receive()
 
 
 if __name__ == '__main__':
     main()
-
